@@ -1,0 +1,37 @@
+name: "Template Curator — Automated Update"
+
+on:
+  schedule:
+    - cron: '0 22 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  curate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read prompt file
+        id: read-prompt
+        run: |
+          {
+            echo 'PROMPT<<EOF'
+            cat .github/prompts/template-curator-ci.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run Template Curator agent
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: ${{ steps.read-prompt.outputs.PROMPT }}
+          claude_args: "--model claude-sonnet-4-6 --allowedTools Bash,Read,Edit,Write,Glob,Grep"
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
